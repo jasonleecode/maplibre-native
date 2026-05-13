@@ -5,10 +5,13 @@
 #include <algorithm>
 
 #include <QtCore/QFile>
+#include <QtCore/QLoggingCategory>
 #include <QtGui/QFont>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include <qglobal.h>
+
+Q_LOGGING_CATEGORY(lcGlyph, "maplibre.glyph")
 
 namespace mbgl {
 
@@ -42,7 +45,13 @@ LocalGlyphRasterizer::LocalGlyphRasterizer(const std::optional<std::string>& fon
 LocalGlyphRasterizer::~LocalGlyphRasterizer() {}
 
 bool LocalGlyphRasterizer::canRasterizeGlyph(const FontStack&, GlyphID glyphID) {
-    return impl->isConfigured() && impl->metrics->inFont(glyphID.complex.code);
+    if (!impl->isConfigured()) return false;
+    bool result = impl->metrics->inFont(glyphID.complex.code);
+    if (!result) {
+        qCDebug(lcGlyph) << "canRasterizeGlyph: U+" << Qt::hex << glyphID.complex.code
+                         << "not in local font, falling back to remote";
+    }
+    return result;
 }
 
 Glyph LocalGlyphRasterizer::rasterizeGlyph(const FontStack&, GlyphID glyphID) {
