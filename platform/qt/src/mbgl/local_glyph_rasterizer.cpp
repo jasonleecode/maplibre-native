@@ -2,6 +2,8 @@
 #include <mbgl/util/i18n.hpp>
 #include <mbgl/util/constants.hpp>
 
+#include <algorithm>
+
 #include <QtCore/QFile>
 #include <QtGui/QFont>
 #include <QtGui/QImage>
@@ -40,8 +42,7 @@ LocalGlyphRasterizer::LocalGlyphRasterizer(const std::optional<std::string>& fon
 LocalGlyphRasterizer::~LocalGlyphRasterizer() {}
 
 bool LocalGlyphRasterizer::canRasterizeGlyph(const FontStack&, GlyphID glyphID) {
-    return impl->isConfigured() && impl->metrics->inFont(glyphID.complex.code) &&
-           util::i18n::allowsFixedWidthGlyphGeneration(glyphID);
+    return impl->isConfigured() && impl->metrics->inFont(glyphID.complex.code);
 }
 
 Glyph LocalGlyphRasterizer::rasterizeGlyph(const FontStack&, GlyphID glyphID) {
@@ -59,8 +60,8 @@ Glyph LocalGlyphRasterizer::rasterizeGlyph(const FontStack&, GlyphID glyphID) {
     glyph.metrics.top = -8;
     glyph.metrics.advance = glyph.metrics.width;
 
-    // Set width of a glyph's backing image to be util::ONE_EM.
-    Size size(util::ONE_EM, glyph.metrics.height);
+    // Use actual advance width for variable-width characters (e.g. Latin), falling back to 1.
+    Size size(std::max(1u, glyph.metrics.width), glyph.metrics.height);
     QImage image(QSize(size.width, size.height), QImage::Format_Alpha8);
     image.fill(qRgba(0, 0, 0, 0));
     QPainter painter(&image);
